@@ -1,6 +1,7 @@
 package bitsets_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -14,52 +15,47 @@ const (
 )
 
 func BenchmarkBitSet_IsSuperSet(b *testing.B) {
-	b.Logf("Running benchmark with BitFieldSize=%v and BitFieldDensity=%v", BitFieldSize, BitFieldDensity)
+	// fmt.Printf instead of b.Logf because we can get nice output without the -v flag
+	fmt.Printf("Running benchmark with BitFieldSize=%v and BitFieldDensity=%v\n", BitFieldSize, BitFieldDensity)
+	// 1 and 2 are random. 3 is a superset of 2.
+	dense1 := bitsets.NewDense(BitFieldSize)
+	populateRandom(dense1, numSetBits)
+	dense2 := bitsets.NewDense(BitFieldSize)
+	populateRandom(dense2, numSetBits)
+	dense3 := bitsets.NewDense(BitFieldSize)
+	bitsets.BitCopy(dense2, dense3)
+	populateRandom(dense3, numSetBits)
 
-	// Use the exact same random bits in each benchmark. Even though the number of
-	// bit sets may differ between benchmarks, I saw odd discrepancies when using
-	// different random sets for each test.
-	data := struct {
-		sets  []bitsets.BitSet
-		input bitsets.BitSet
-	}{}
-	data.input = bitsets.NewSparse(BitFieldSize)
-	populateRandom(data.input, numSetBits*3) // set more bits for a chance of matching
-	growData := func(n int) {
-		for len(data.sets) < n {
-			bs := bitsets.NewSparse(BitFieldSize) // arbitrary type since it will be copied for each test
-			populateRandom(bs, numSetBits)
-			data.sets = append(data.sets, bs)
+	sparse1 := bitsets.NewSparse(BitFieldSize)
+	bitsets.BitCopy(dense1, sparse1)
+	sparse2 := bitsets.NewSparse(BitFieldSize)
+	bitsets.BitCopy(dense2, sparse2)
+	sparse3 := bitsets.NewSparse(BitFieldSize)
+	bitsets.BitCopy(dense3, sparse3)
+
+	b.Run("dense/positive", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dense3.IsSuperSet(dense2)
 		}
-	}
-	bsTypes := map[string]func(uint) bitsets.BitSet{
-		"dense":  bitsets.NewDense,
-		"sparse": bitsets.NewSparse,
-	}
-	for name, bs := range bsTypes {
-		b.Run(name, func(b *testing.B) {
-			// Create all the bit sets before resetting the benchmark timer
-			sets := make([]bitsets.BitSet, b.N)
-			growData(b.N)
-			for i := range sets {
-				sets[i] = bs(BitFieldSize)
-				bitsets.BitCopy(data.sets[i], sets[i])
-			}
-			input := bs(BitFieldSize)
-			bitsets.BitCopy(data.input, input)
+	})
 
-			b.ResetTimer()
-			hit, miss := 0, 0
-			for _, bs := range sets {
-				if input.IsSuperSet(bs) {
-					hit++
-				} else {
-					miss++
-				}
-			}
-			b.Logf("Match ratio is %d/%d hit/miss", hit, miss)
-		})
-	}
+	b.Run("dense/negative", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			dense3.IsSuperSet(dense1)
+		}
+	})
+
+	b.Run("sparse/positive", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			sparse3.IsSuperSet(sparse2)
+		}
+	})
+
+	b.Run("sparse/negative", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			sparse3.IsSuperSet(sparse1)
+		}
+	})
 }
 
 func populateRandom(bs bitsets.BitSet, numSetBits int) {
