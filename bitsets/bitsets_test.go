@@ -9,20 +9,18 @@ import (
 
 const (
 	BitFieldSize    = 1000 // number of bits
-	BitFieldDensity = 0.1  // proportion of set 1s
+	BitFieldDensity = 0.1  // approximate proportion of set 1s
 )
 
 func BenchmarkBitSet_IsSuperSet(b *testing.B) {
-	b.Logf("%v: N=%v", b.Name(), b.N)
-
+	b.Logf("Running benchmark with BitFieldSize=%v and BitFieldDensity=%v", BitFieldSize, BitFieldDensity)
 	bsTypes := map[string]func(uint) bitsets.BitSet{
 		"dense":  bitsets.NewDense,
 		"sparse": bitsets.NewSparse,
 	}
 	for name, bs := range bsTypes {
 		b.Run(name, func(b *testing.B) {
-			b.Logf("%v: N=%v", b.Name(), b.N)
-
+			// Create all the bit sets before resetting the benchmark timer
 			sets := make([]bitsets.BitSet, b.N)
 			numSetBits := int(float32(BitFieldSize) * BitFieldDensity)
 			for i := range sets {
@@ -31,6 +29,7 @@ func BenchmarkBitSet_IsSuperSet(b *testing.B) {
 			}
 			input := bs(BitFieldSize)
 			populateRandom(input, numSetBits*3) // set more bits for a chance of matching
+
 			b.ResetTimer()
 			hit, miss := 0, 0
 			for _, bs := range sets {
