@@ -1,6 +1,9 @@
 package bitsets
 
-import densebs "github.com/willf/bitset"
+import (
+	sparsebs "github.com/js-ojus/sparsebitset"
+	densebs "github.com/willf/bitset"
+)
 
 type BitSet interface {
 	IsSuperSet(other BitSet) bool
@@ -21,6 +24,23 @@ func (d dense) IsSuperSet(other BitSet) bool {
 
 func (d dense) Set(n uint) BitSet {
 	d.BitSet.Set(n) // ignore return val
+	return d
+}
+
+func NewSparse(length uint) BitSet {
+	return sparse{sparsebs.New(uint64(length))}
+}
+
+type sparse struct {
+	*sparsebs.BitSet
+}
+
+func (d sparse) IsSuperSet(other BitSet) bool {
+	return d.BitSet.IsSuperSet(other.(sparse).BitSet)
+}
+
+func (d sparse) Set(n uint) BitSet {
+	d.BitSet.Set(uint64(n)) // ignore return val
 	return d
 }
 

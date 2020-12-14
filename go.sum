@@ -1,2 +1,4 @@
+github.com/js-ojus/sparsebitset v1.0.4 h1:Aa34W9T0BFG4ifkCh/4YDZzMBYk/fqG5Lr1FEnzD3R8=
+github.com/js-ojus/sparsebitset v1.0.4/go.mod h1:8nhXSam1EUwZdU2hkSiG0UBY2B/LkoHTjbJBjZvEJVU=
 github.com/willf/bitset v1.1.11 h1:N7Z7E9UvjW+sGsEl7k/SJrvY2reP1A07MrGuCjIOjRE=
 github.com/willf/bitset v1.1.11/go.mod h1:83CECat5yLh5zVOf4P1ErAgKA5UDvKtgyUABdr3+MjI=

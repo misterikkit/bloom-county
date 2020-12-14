@@ -12,23 +12,36 @@ const (
 	BitFieldDensity = 0.1  // proportion of set 1s
 )
 
-func BenchmarkBitSet_IsSubset(b *testing.B) {
+func BenchmarkBitSet_IsSuperSet(b *testing.B) {
+	b.Logf("%v: N=%v", b.Name(), b.N)
 
-	sets := make([]bitsets.BitSet, b.N)
-	numSetBits := int(float32(BitFieldSize) * BitFieldDensity)
-	for i := range sets {
-		sets[i] = bitsets.NewDense(BitFieldSize)
-		populateRandom(sets[i], numSetBits)
+	bsTypes := map[string]func(uint) bitsets.BitSet{
+		"dense":  bitsets.NewDense,
+		"sparse": bitsets.NewSparse,
 	}
-	input := bitsets.NewDense(BitFieldSize)
-	populateRandom(input, numSetBits)
-	b.ResetTimer()
-	for _, bs := range sets {
-		if input.IsSuperSet(bs) {
-			b.Log("Match")
-		} else {
-			b.Log("No Match")
-		}
+	for name, bs := range bsTypes {
+		b.Run(name, func(b *testing.B) {
+			b.Logf("%v: N=%v", b.Name(), b.N)
+
+			sets := make([]bitsets.BitSet, b.N)
+			numSetBits := int(float32(BitFieldSize) * BitFieldDensity)
+			for i := range sets {
+				sets[i] = bs(BitFieldSize)
+				populateRandom(sets[i], numSetBits)
+			}
+			input := bs(BitFieldSize)
+			populateRandom(input, numSetBits*3) // set more bits for a chance of matching
+			b.ResetTimer()
+			hit, miss := 0, 0
+			for _, bs := range sets {
+				if input.IsSuperSet(bs) {
+					hit++
+				} else {
+					miss++
+				}
+			}
+			b.Logf("Match ratio is %d/%d hit/miss", hit, miss)
+		})
 	}
 }
 
