@@ -6,8 +6,10 @@ import (
 )
 
 type BitSet interface {
-	IsSuperSet(other BitSet) bool
 	Set(n uint) BitSet
+	Test(n uint) bool
+	IsSuperSet(other BitSet) bool
+	NextSet(n uint) (uint, bool)
 }
 
 func NewDense(length uint) BitSet {
@@ -18,14 +20,13 @@ type dense struct {
 	*densebs.BitSet
 }
 
-func (d dense) IsSuperSet(other BitSet) bool {
-	return d.BitSet.IsSuperSet(other.(dense).BitSet)
-}
-
 func (d dense) Set(n uint) BitSet {
 	d.BitSet.Set(n) // ignore return val
 	return d
 }
+func (d dense) Test(n uint) bool             { return d.BitSet.Test(n) }
+func (d dense) IsSuperSet(other BitSet) bool { return d.BitSet.IsSuperSet(other.(dense).BitSet) }
+func (d dense) NextSet(n uint) (uint, bool)  { return d.BitSet.NextSet(n) }
 
 func NewSparse(length uint) BitSet {
 	return sparse{sparsebs.New(uint64(length))}
@@ -35,13 +36,27 @@ type sparse struct {
 	*sparsebs.BitSet
 }
 
-func (d sparse) IsSuperSet(other BitSet) bool {
-	return d.BitSet.IsSuperSet(other.(sparse).BitSet)
+func (s sparse) Set(n uint) BitSet {
+	s.BitSet.Set(uint64(n)) // ignore return val
+	return s
+}
+func (s sparse) Test(n uint) bool             { return s.BitSet.Test(uint64(n)) }
+func (s sparse) IsSuperSet(other BitSet) bool { return s.BitSet.IsSuperSet(other.(sparse).BitSet) }
+
+func (s sparse) NextSet(n uint) (uint, bool) {
+	bit, ok := s.BitSet.NextSet(uint64(n))
+	return uint(bit), ok
 }
 
-func (d sparse) Set(n uint) BitSet {
-	d.BitSet.Set(uint64(n)) // ignore return val
-	return d
+// BitCopy copies the set bits from one BitSet to another. It is done bit-by-bit
+// so that sparse and dense sets can be converted.
+func BitCopy(from, to BitSet) {
+	// TODO: call to.BitSet.Clear
+	bit, ok := from.NextSet(0)
+	for ok {
+		to.Set(bit)
+		bit, ok = from.NextSet(bit + 1)
+	}
 }
 
 /*
@@ -71,7 +86,6 @@ IsSuperSet(c BitSet) bool
 Len() int
 NextSet(n uint64) (uint64, bool)
 None() bool
-//  ReadFrom(r io.Reader) (int64, error)
 Set(n uint64) BitSet
 SetTo(n uint64, val bool) BitSet
 //  SymmetricDifference(c BitSet) BitSet
@@ -79,5 +93,4 @@ SetTo(n uint64, val bool) BitSet
 Test(n uint64) bool
 Union(c BitSet) BitSet
 UnionCardinality(c BitSet) (uint64, error)
-//  WriteTo(w io.Writer) (int64, error)
 */
